@@ -228,6 +228,23 @@
 
   .again-wrap { text-align: center; }
 
+  .share {
+    background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 16px; padding: 22px 24px; margin-bottom: 24px;
+  }
+  .share h3 { margin: 0 0 6px; font-size: 18px; }
+  .share .note { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; }
+  .share-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-ghost {
+    display: inline-block; border: 1.5px solid var(--baseline); cursor: pointer;
+    font: inherit; font-weight: 600; font-size: 15px; color: var(--ink);
+    background: transparent; padding: 12px 22px; border-radius: 999px;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .share-status { margin: 14px 0 0; color: var(--ok); font-size: 14px; display: none; }
+  .share-status.show { display: block; }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
@@ -280,6 +297,17 @@
       <summary>Что означают остальные языки любви</summary>
       <div id="interp-others"></div>
     </details>
+
+    <div class="share">
+      <h3>Сохранить и отправить результат</h3>
+      <p class="note">Красивую карточку с результатами можно отправить в мессенджер или сохранить на устройство.</p>
+      <div class="share-row">
+        <button class="btn-ghost" id="btn-share">📤 Отправить в мессенджер</button>
+        <button class="btn-ghost" id="btn-download">⬇️ Скачать картинкой</button>
+        <button class="btn-ghost" id="btn-copy">📋 Скопировать текст</button>
+      </div>
+      <p class="share-status" id="share-status"></p>
+    </div>
 
     <div class="again-wrap">
       <button class="btn" id="btn-again">Пройти ещё раз</button>
@@ -440,12 +468,15 @@ btnBack.addEventListener("click", () => {
 
 /* ---------- результаты ---------- */
 
-function showResults() {
+function computeScores() {
   const scores = { A: 0, B: 0, C: 0, D: 0, E: 0 };
   answers.forEach(k => scores[k]++);
-
   const order = Object.keys(LANGS).sort((a, b) => scores[b] - scores[a]);
-  const top = order[0];
+  return { scores, order, top: order[0] };
+}
+
+function showResults() {
+  const { scores, order, top } = computeScores();
   const ties = order.filter(k => scores[k] === scores[top]);
 
   // hero
@@ -494,6 +525,180 @@ function showResults() {
     document.querySelectorAll(".bar-fill").forEach(b => { b.style.width = b.dataset.w + "%"; });
   }));
 }
+
+/* ---------- сохранение и отправка результатов ---------- */
+
+const TEST_URL = "https://nikolaypetrovnsn-afk.github.io/5-love-languages/";
+
+function stripHtml(html) {
+  const d = document.createElement("div");
+  d.innerHTML = html;
+  return d.textContent;
+}
+
+function resultText() {
+  const { scores, order, top } = computeScores();
+  const lines = ["💛 Тест «5 языков любви» — результат", "",
+    "Язык любви ребёнка — " + LANGS[top].full + " (" + LANGS[top].name + ")", ""];
+  order.forEach(k => lines.push("• " + LANGS[k].name + " — " + scores[k] + " из " + LANGS[k].max));
+  lines.push("", stripHtml(LANGS[top].interp[0]));
+  lines.push("", "Пройти тест: " + TEST_URL);
+  lines.push(new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }));
+  return lines.join("\n");
+}
+
+function wrapText(ctx, text, maxW) {
+  const words = text.split(" ");
+  const lines = []; let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; }
+    else cur = t;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/* Карточка с результатами (canvas -> PNG). Всегда рисуется в светлой теме,
+   чтобы одинаково хорошо смотреться в мессенджере. */
+function buildResultCard() {
+  const { scores, order, top } = computeScores();
+  const W = 1000, PAD = 64;
+  const C = {
+    bg: "#fcfcfb", ink: "#0b0b0b", ink2: "#52514e", muted: "#898781",
+    hairline: "#e1e0d9", accent: "#2a78d6", deemph: "#b5b3ac",
+  };
+
+  // --- измерительный проход ---
+  const mc = document.createElement("canvas").getContext("2d");
+  const interpLines = [];
+  mc.font = "400 26px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  LANGS[top].interp.forEach(p => { interpLines.push(...wrapText(mc, stripHtml(p), W - PAD * 2 - 48)); interpLines.push(""); });
+  interpLines.pop(); // лишний пустой после последнего абзаца
+  const BAR_H = 86;
+  const barsY = 372;
+  const barsEnd = barsY + order.length * BAR_H + 8;
+  const interpTitleY = barsEnd + 74;
+  const interpEnd = interpTitleY + 14 + interpLines.length * 38 + 30;
+  const footerY = interpEnd + 34;
+  const H = footerY + 64;
+
+  // --- рисование (x2 для чёткости на ретине) ---
+  const cv = document.createElement("canvas");
+  cv.width = W * 2; cv.height = H * 2;
+  const ctx = cv.getContext("2d");
+  ctx.scale(2, 2);
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = C.accent;
+  ctx.fillRect(0, 0, W, 10);
+
+  const center = (text, y, font, color) => {
+    ctx.font = font; ctx.fillStyle = color;
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(text, W / 2, y);
+  };
+
+  center("👑", 104, "400 60px system-ui, -apple-system, 'Segoe UI', sans-serif", C.ink);
+  center("Язык любви вашего ребёнка", 176, "600 30px system-ui, -apple-system, 'Segoe UI', sans-serif", C.ink2);
+  center(LANGS[top].name, 244, "700 52px system-ui, -apple-system, 'Segoe UI', sans-serif", C.ink);
+  center(LANGS[top].full, 292, "400 26px system-ui, -apple-system, 'Segoe UI', sans-serif", C.ink2);
+
+  // бары
+  order.forEach((k, i) => {
+    const L = LANGS[k];
+    const y = barsY + i * BAR_H;
+    ctx.textAlign = "left";
+    ctx.font = "600 27px system-ui, -apple-system, 'Segoe UI', sans-serif";
+    ctx.fillStyle = C.ink;
+    const label = L.name + (k === top ? "  ·  ведущий" : "");
+    ctx.fillText(label, PAD, y + 24);
+    ctx.textAlign = "right";
+    ctx.font = "400 26px system-ui, -apple-system, 'Segoe UI', sans-serif";
+    ctx.fillStyle = C.ink2;
+    ctx.fillText(scores[k] + " из " + L.max, W - PAD, y + 24);
+    // track
+    const tw = W - PAD * 2, ty = y + 42, th = 16;
+    ctx.fillStyle = C.hairline;
+    ctx.beginPath(); ctx.roundRect(PAD, ty, tw, th, [0, 8, 8, 0]); ctx.fill();
+    // fill
+    const fw = Math.max(tw * scores[k] / L.max, th); // минимум — ширина скругления
+    ctx.fillStyle = k === top ? C.accent : C.deemph;
+    ctx.beginPath(); ctx.roundRect(PAD, ty, fw, th, [0, 8, 8, 0]); ctx.fill();
+  });
+
+  // интерпретация
+  ctx.textAlign = "left";
+  ctx.font = "700 30px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  ctx.fillStyle = C.ink;
+  ctx.fillText("💛 Что это означает", PAD, interpTitleY);
+  ctx.font = "400 26px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  ctx.fillStyle = C.ink2;
+  let ly = interpTitleY + 44;
+  interpLines.forEach(line => { if (line) ctx.fillText(line, PAD + 24, ly); ly += 38; });
+
+  // футер
+  ctx.strokeStyle = C.hairline; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(PAD, footerY - 26); ctx.lineTo(W - PAD, footerY - 26); ctx.stroke();
+  ctx.font = "400 22px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  ctx.fillStyle = C.muted;
+  ctx.textAlign = "left";
+  ctx.fillText(new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }), PAD, footerY);
+  ctx.textAlign = "right";
+  ctx.fillText(TEST_URL.replace("https://", ""), W - PAD, footerY);
+
+  return cv;
+}
+
+function cardFile() {
+  return new Promise(resolve => buildResultCard().toBlob(
+    blob => resolve(new File([blob], "5-yazykov-lyubvi-rezultat.png", { type: "image/png" })),
+    "image/png"));
+}
+
+function setStatus(msg) {
+  const el = document.getElementById("share-status");
+  el.textContent = msg;
+  el.classList.add("show");
+}
+
+document.getElementById("btn-share").addEventListener("click", async () => {
+  try {
+    const file = await cardFile();
+    const text = resultText();
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: "5 языков любви — результат", text });
+      return; // статус не нужен: открылся системный шэринг
+    }
+    // нет Web Share API (десктопный браузер) — скачиваем, пользователь прикрепит сам
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url; a.download = file.name; a.click();
+    URL.revokeObjectURL(url);
+    setStatus("Карточка сохранена в загрузки — прикрепите её к сообщению в мессенджере.");
+  } catch (e) {
+    if (e && e.name === "AbortError") return; // пользователь отменил шэринг
+    setStatus("Не получилось поделиться: " + (e.message || e));
+  }
+});
+
+document.getElementById("btn-download").addEventListener("click", async () => {
+  const file = await cardFile();
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url; a.download = file.name; a.click();
+  URL.revokeObjectURL(url);
+  setStatus("Карточка сохранена в загрузки.");
+});
+
+document.getElementById("btn-copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(resultText());
+    setStatus("Текст результата скопирован — вставьте его в сообщение.");
+  } catch (e) {
+    setStatus("Не удалось скопировать: " + (e.message || e));
+  }
+});
 
 /* ---------- кнопки ---------- */
 
