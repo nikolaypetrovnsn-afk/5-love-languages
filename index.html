@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5 языков любви — тест для родителей и детей</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --hairline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --ring: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6;
+    --accent-soft: #e3eefb;
+    --deemph: #b5b3ac;
+    --ok: #0ca30c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --hairline: #2c2c2a;
+      --baseline: #383835;
+      --ring: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
+      --accent-soft: #14283f;
+      --deemph: #4a4a47;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  /* ---------- intro ---------- */
+  .intro { text-align: center; padding-top: 6vh; }
+  .intro .emoji { font-size: 56px; line-height: 1; }
+  .intro h1 { font-size: 30px; margin: 18px 0 8px; letter-spacing: -0.02em; }
+  .intro .sub { color: var(--ink-2); font-size: 17px; max-width: 460px; margin: 0 auto; }
+  .intro .hint { color: var(--muted); font-size: 14px; margin-top: 14px; }
+  .btn {
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    font-size: 17px;
+    color: #fff;
+    background: var(--accent);
+    padding: 14px 36px;
+    border-radius: 999px;
+    margin-top: 28px;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(42,120,214,.35); }
+  .btn:active { transform: translateY(0); }
+
+  /* ---------- quiz ---------- */
+  .screen { display: none; animation: screenIn .35s ease; }
+  .screen.active { display: block; }
+  @keyframes screenIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  .back {
+    border: none; background: none; cursor: pointer;
+    color: var(--muted); font-size: 20px; padding: 4px 8px; border-radius: 8px;
+    visibility: hidden;
+  }
+  .back.can { visibility: visible; }
+  .back:hover { color: var(--ink); background: var(--surface); }
+  .progress-track {
+    flex: 1; height: 6px; border-radius: 3px; background: var(--hairline); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width .4s cubic-bezier(.22,1,.36,1);
+  }
+  .qcount { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .qcard {
+    background: var(--surface);
+    border: 1px solid var(--ring);
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: 0 2px 10px rgba(11,11,11,.04);
+  }
+  .qlabel { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+  .qnum { font-size: 15px; color: var(--ink-2); margin-bottom: 20px; }
+
+  .options { display: flex; flex-direction: column; gap: 14px; }
+  .option {
+    position: relative;
+    display: flex; align-items: center; gap: 16px;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--page);
+    border: 1.5px solid var(--hairline);
+    border-radius: 14px;
+    padding: 18px 18px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s, transform .15s, box-shadow .2s,
+                opacity .45s ease, filter .45s ease, max-height .45s ease, padding .45s ease, margin .45s ease, border-width .45s ease;
+    overflow: hidden;
+  }
+  .option:hover:not(.locked) { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(42,120,214,.15); }
+  .option .letter {
+    flex: 0 0 auto;
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--hairline);
+    color: var(--ink-2);
+    font-weight: 700; font-size: 15px;
+    transition: background .25s, color .25s;
+  }
+  .option.picked { border-color: var(--accent); background: var(--accent-soft); }
+  .option.picked .letter { background: var(--accent); color: #fff; }
+  .option.picked::after {
+    content: "✓";
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 18px;
+    animation: pop .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+  /* исчезание невыбранного */
+  .option.fading {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(8px) scale(.97);
+    pointer-events: none;
+    max-height: 0;
+    padding-top: 0; padding-bottom: 0;
+    margin-top: -7px; /* съедает половину gap */
+    border-width: 0;
+  }
+  .options.locked .option { pointer-events: none; }
+
+  .source { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  .source a { color: inherit; }
+
+  /* ---------- results ---------- */
+  .results .hero { text-align: center; margin-bottom: 30px; }
+  .results .hero .crown { font-size: 44px; line-height: 1; }
+  .results .hero h2 { font-size: 26px; margin: 14px 0 4px; letter-spacing: -0.02em; }
+  .results .hero .who { color: var(--ink-2); font-size: 16px; }
+  .tie-note {
+    display: none;
+    margin: 12px auto 0; max-width: 460px;
+    background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 12px; padding: 10px 16px;
+    color: var(--ink-2); font-size: 14px;
+  }
+
+  .chart { background: var(--surface); border: 1px solid var(--ring); border-radius: 20px; padding: 22px 22px 10px; margin-bottom: 24px; }
+  .chart h3 { margin: 0 0 16px; font-size: 15px; color: var(--ink-2); font-weight: 600; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 9px 0; border-radius: 8px; transition: background .15s; }
+  .row:hover { background: color-mix(in srgb, var(--hairline) 35%, transparent); }
+  .row .name { font-size: 15px; color: var(--ink); }
+  .row .val { font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .row .val strong { color: var(--ink); }
+  .bar-track { grid-column: 1 / -1; height: 10px; background: var(--hairline); border-radius: 0 5px 5px 0; overflow: hidden; }
+  .bar-fill {
+    height: 100%;
+    background: var(--deemph);
+    border-radius: 0 5px 5px 0;   /* data-end rounding, baseline side flat */
+    width: 0;
+    transition: width .8s cubic-bezier(.22,1,.36,1);
+  }
+  .row.win .bar-fill { background: var(--accent); }
+
+  .interp {
+    background: var(--surface);
+    border: 1px solid var(--ring);
+    border-left: 4px solid var(--accent);
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 24px;
+    animation: screenIn .5s ease .4s backwards;
+  }
+  .interp h3 { margin: 0 0 10px; font-size: 18px; }
+  .interp p { margin: 0 0 12px; color: var(--ink-2); font-size: 16px; }
+  .interp p:last-child { margin-bottom: 0; }
+  .interp strong { color: var(--ink); }
+
+  details.others {
+    background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 16px; padding: 4px 22px; margin-bottom: 24px;
+  }
+  details.others summary {
+    cursor: pointer; padding: 14px 0; font-weight: 600; color: var(--ink-2); list-style: none;
+  }
+  details.others summary::-webkit-details-marker { display: none; }
+  details.others summary::before { content: "▸ "; color: var(--muted); }
+  details.others[open] summary::before { content: "▾ "; }
+  details.others .other-block { padding: 4px 0 16px; border-top: 1px solid var(--hairline); }
+  details.others h4 { margin: 14px 0 6px; font-size: 16px; }
+  details.others p { margin: 0; color: var(--ink-2); font-size: 15px; }
+
+  .again-wrap { text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ==================== ИНТРО ==================== -->
+  <section id="screen-intro" class="screen intro active">
+    <div class="emoji">💛</div>
+    <h1>5 языков любви</h1>
+    <p class="sub">Тест для родителей и детей по книге Гэри Чепмена. Как укрепить отношения со своим ребёнком? Достаточно понять, на каком языке любви можно к нему «достучаться».</p>
+    <p class="hint">30 вопросов · по 2 утверждения в каждом · выберите то, с чем ребёнок согласен</p>
+    <button class="btn" id="btn-start">Начать тест</button>
+  </section>
+
+  <!-- ==================== ОПРОС ==================== -->
+  <section id="screen-quiz" class="screen">
+    <div class="topbar">
+      <button class="back" id="btn-back" title="Предыдущий вопрос" aria-label="Предыдущий вопрос">←</button>
+      <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+      <div class="qcount" id="qcount"></div>
+    </div>
+    <div class="qcard">
+      <div class="qlabel">Вопрос <span id="qnum"></span> из 30</div>
+      <div class="qnum">Выберите утверждение, с которым согласен ребёнок:</div>
+      <div class="options" id="options"></div>
+    </div>
+    <p class="source">Тест по книге Гэри Чепмена «Пять языков любви» · интерпретация — <a href="https://mysensorium.blog/svoimi-rukami/tpost/80sopsg331-5-yazikov-lyubvi-test-dlya-roditelei-i-d" target="_blank" rel="noopener">mysensorium.blog</a></p>
+  </section>
+
+  <!-- ==================== РЕЗУЛЬТАТЫ ==================== -->
+  <section id="screen-results" class="screen results">
+    <div class="hero">
+      <div class="crown">👑</div>
+      <h2 id="winner-title"></h2>
+      <div class="who" id="winner-sub"></div>
+      <div class="tie-note" id="tie-note"></div>
+    </div>
+
+    <div class="chart">
+      <h3>Баллы по каждому языку любви</h3>
+      <div id="bars"></div>
+    </div>
+
+    <div class="interp" id="interp-main"></div>
+
+    <details class="others">
+      <summary>Что означают остальные языки любви</summary>
+      <div id="interp-others"></div>
+    </details>
+
+    <div class="again-wrap">
+      <button class="btn" id="btn-again">Пройти ещё раз</button>
+    </div>
+    <p class="source">Тест по книге Гэри Чепмена «Пять языков любви» · интерпретация — <a href="https://mysensorium.blog/svoimi-rukami/tpost/80sopsg331-5-yazikov-lyubvi-test-dlya-roditelei-i-d" target="_blank" rel="noopener">mysensorium.blog</a></p>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------- данные ---------- */
+
+const LANGS = {
+  A: { name: "Слова поощрения", full: "Слова поощрения, ободрения и поддержки", max: 11,
+       interp: ["Ребёнку важно <strong>слышать</strong> любовь и похвалу. Говорите, что вы его любите, и конкретизируйте похвалу — не просто «ты — лучший!», а «ничего себе, как ты быстро решил эту задачу, молодец!».",
+                "Оставляйте милые вдохновляющие записки в кармашках, созванивайтесь во время долгой разлуки, радуйте друг друга комплиментами — например, записывайте их на магнитной доске, каждый день придумывая что-то новое."] },
+  B: { name: "Качественное время", full: "Качественное время вместе, безраздельное внимание", max: 14,
+       interp: ["Ребёнку важно <strong>проводить время</strong> с теми, кого он любит, и получать безраздельное внимание.",
+                "Устраивайте семейные прогулки, играйте в настольные игры, читайте. Вместе убирайтесь, выполняйте уроки, готовьте, смотрите мультфильмы."] },
+  C: { name: "Подарки", full: "Подарки", max: 12,
+       interp: ["Ребёнок ценит <strong>небольшие и неожиданные сюрпризы</strong>. Не «расплачивайтесь» подарками за своё отсутствие — преподносите милые безделушки просто так.",
+                "Подбирайте презент, исходя из предпочтений ребёнка. Вместе играйте в «остров сокровищ» или в принцесс! И будьте внимательны к подаркам самого ребёнка — будь то камушек или букет одуванчиков."] },
+  D: { name: "Действия", full: "Действия / практическая помощь", max: 12,
+       interp: ["Ребёнку важно <strong>чувствовать, что о нём заботятся</strong> через дела и помощь. Это даёт ощущение любви.",
+                "Поддерживайте в освоении новых навыков (например, ездить на велосипеде) и помогайте: застилать постель, починить сломанную игрушку и т. д."] },
+  E: { name: "Прикосновения", full: "Прикосновения / физический контакт", max: 11,
+       interp: ["Ребёнку важно чувствовать, что мама (папа) <strong>рядом — буквально</strong>: через объятия и физический контакт.",
+                "Играйте в пальчиковые игры, часто обнимайтесь (особенно перед сном, после садика и школы), гладьте по голове в минуты тревоги."] },
+};
+
+/* [утверждение 1, ключ 1, утверждение 2, ключ 2] */
+const QUESTIONS = [
+  ["Мне нравится, когда мне дарят небольшие подарки без повода.", "C",
+   "Мне приятно, когда мама (папа) находится рядом.", "B"],
+  ["Мне нужно, чтобы родители прикасались ко мне каждый день.", "E",
+   "Мне каждый день нужно слышать слова одобрения.", "A"],
+  ["Я чувствую любовь, когда мама (папа) с радостью выполняет мою просьбу (почитать сказку, вместе поиграть или погулять).", "D",
+   "Я чувствую любовь, когда мама (папа) говорит мне, насколько я ей (ему) дорог.", "A"],
+  ["Для меня важны подарки от родителей.", "C",
+   "Я чувствую себя хорошо, когда мама (папа) прикасается ко мне.", "E"],
+  ["Мне нравится, когда мне говорят, что меня ценят.", "A",
+   "Мне нравится, когда мама (папа) смотрит на меня, когда мы разговариваем.", "B"],
+  ["Мне нравится, когда мама (папа) целует меня.", "E",
+   "Подарки от родителей без особых случаев радуют меня.", "C"],
+  ["Я бы хотел (-а), чтобы родители помогали мне в моих повседневных обязанностях (сделать уроки, убраться в комнате).", "D",
+   "Мне нравятся продолжительные поездки всей семьёй.", "B"],
+  ["Я знаю, что мама (папа) думает обо мне, когда дарит подарок.", "C",
+   "Я чувствую любовь, когда мама (папа) помогает мне.", "D"],
+  ["Я чувствую любовь, когда на мой день рождения мама (папа) говорит мне приятные слова.", "A",
+   "Я чувствую любовь, когда мама (папа) дарит мне подарок на мой день рождения.", "C"],
+  ["Мне нравится, когда мама (папа) дарит мне внимание.", "B",
+   "Мне нравится, когда мама (папа) делает мне что-то приятное.", "D"],
+  ["Я ценю многие вещи, которые делает для меня мама (папа).", "D",
+   "Мне нравится получать подарки от мамы (папы).", "C"],
+  ["Я чувствую себя в безопасности, когда мама (папа) прикасается ко мне.", "E",
+   "Я чувствую любовь, когда мама (папа) делает мне что-то приятное.", "D"],
+  ["Мне бы хотелось, чтобы родители хвалили мою внешность.", "A",
+   "Я чувствую любовь, когда мама (папа) старается понять, что я чувствую.", "B"],
+  ["Мне нравится получать подарки от родителей.", "C",
+   "Я чувствую любовь, когда мама (папа) помогает мне.", "D"],
+  ["Мне нравится, когда мама (папа) прикасается ко мне, когда мы идём рядом.", "E",
+   "Мне нравится, когда мама (папа) внимательно слушает меня.", "B"],
+  ["Мне бы хотелось, чтобы родители хвалили мои достижения.", "A",
+   "Я знаю, что мама (папа) любит меня, когда делает для меня что-то, что ей (ему) обычно не нравится делать.", "D"],
+  ["Мне нравится, когда мы с мамой (папой) разговариваем или делаем что-то вместе.", "B",
+   "Мне нравится, когда мама (папа) часто прикасается ко мне.", "E"],
+  ["Я ценю мамину (папину) похвалу и стараюсь избежать критики.", "A",
+   "Несколько недорогих подарков от родителей для меня ценнее, чем один большой.", "C"],
+  ["Когда мы обнимаемся вместе с мамой (папой), я чувствую себя хорошо.", "E",
+   "Мамины (папины) поступки влияют на меня больше, чем слова.", "D"],
+  ["Мне нравится, когда мы с мамой (папой) вместе что-то делаем.", "B",
+   "Мне нравятся тёплые слова, которые говорит мне мама (папа).", "A"],
+  ["Для меня важны слова одобрения.", "A",
+   "Когда мама (папа) помогает мне, я понимаю, что она (он) меня любит.", "D"],
+  ["Мне нравится проводить время с мамой (папой).", "B",
+   "Мне нравится получать от мамы (папы) небольшие сюрпризы.", "C"],
+  ["Мне нравится сидеть рядом с мамой (папой).", "B",
+   "Мне нравится, когда мама (папа) говорит мне, что я красивый (-ая).", "A"],
+  ["Я чувствую любовь, когда мама (папа) хвалит меня.", "A",
+   "Для меня важны видимые проявления любви (когда меня обнимают, говорят приятные слова).", "C"],
+  ["Мне нравится держать за руку маму (папу).", "E",
+   "Мне нравится посещать с мамой (папой) разные места.", "B"],
+  ["Я чувствую любовь, когда мама (папа) обнимает меня.", "E",
+   "Я чувствую любовь, когда получаю от мамы (папы) подарки.", "C"],
+  ["Я чувствую любовь, когда мама (папа) помогает мне.", "D",
+   "Я чувствую любовь, когда мама (папа) прикасается ко мне.", "E"],
+  ["Мне нравится проводить с мамой (папой) время наедине.", "B",
+   "Мне нравятся долгие прогулки с мамой (папой).", "B"],
+  ["Мне нравится проводить с мамой (папой) время наедине.", "B",
+   "Я чувствую любовь, когда мама (папа) помогает мне.", "D"],
+  ["Мне нравится получать внимание мамы (папы).", "C",
+   "Мне нравится, когда мама (папа) обнимает меня.", "E"],
+];
+
+/* ---------- состояние и DOM ---------- */
+
+const screens = { intro: document.getElementById("screen-intro"), quiz: document.getElementById("screen-quiz"), results: document.getElementById("screen-results") };
+const optionsEl = document.getElementById("options");
+const progressEl = document.getElementById("progress");
+const qcountEl = document.getElementById("qcount");
+const qnumEl = document.getElementById("qnum");
+const btnBack = document.getElementById("btn-back");
+
+let answers = []; // ключ выбранной буквы на каждый вопрос
+let idx = 0;
+let advancing = false;
+
+function show(name) {
+  Object.values(screens).forEach(s => s.classList.remove("active"));
+  screens[name].classList.add("active");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderQuestion() {
+  const q = QUESTIONS[idx];
+  advancing = false;
+  qnumEl.textContent = idx + 1;
+  qcountEl.textContent = (idx + 1) + " / " + QUESTIONS.length;
+  progressEl.style.width = (idx / QUESTIONS.length * 100) + "%";
+  btnBack.classList.toggle("can", idx > 0);
+  optionsEl.classList.remove("locked");
+  optionsEl.innerHTML = "";
+  [0, 1].forEach(i => {
+    const b = document.createElement("button");
+    b.className = "option";
+    b.innerHTML = '<span class="letter">' + String.fromCharCode(65 + i) + '</span><span>' + q[i * 2] + "</span>";
+    b.addEventListener("click", () => choose(b, q[i * 2 + 1]));
+    optionsEl.appendChild(b);
+  });
+}
+
+function choose(btn, key) {
+  if (advancing) return;
+  advancing = true;
+  answers[idx] = key;
+  optionsEl.classList.add("locked");
+  btn.classList.add("picked");
+  // невыбранный вариант красиво исчезает
+  [...optionsEl.children].forEach(o => { if (o !== btn) o.classList.add("fading"); });
+  setTimeout(() => {
+    if (idx < QUESTIONS.length - 1) {
+      idx++;
+      renderQuestion();
+    } else {
+      progressEl.style.width = "100%";
+      setTimeout(showResults, 400);
+    }
+  }, 650);
+}
+
+btnBack.addEventListener("click", () => {
+  if (advancing || idx === 0) return;
+  idx--;
+  renderQuestion();
+});
+
+/* ---------- результаты ---------- */
+
+function showResults() {
+  const scores = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+  answers.forEach(k => scores[k]++);
+
+  const order = Object.keys(LANGS).sort((a, b) => scores[b] - scores[a]);
+  const top = order[0];
+  const ties = order.filter(k => scores[k] === scores[top]);
+
+  // hero
+  document.getElementById("winner-title").textContent = "Язык любви вашего ребёнка — " + LANGS[top].name;
+  document.getElementById("winner-sub").textContent = LANGS[top].full;
+  const tieNote = document.getElementById("tie-note");
+  if (ties.length > 1) {
+    tieNote.style.display = "block";
+    tieNote.textContent = "Обратите внимание: " + ties.map(k => "«" + LANGS[k].name + "»").join(" и ") +
+      " набрали поровну баллов. Возможно, у ребёнка два ведущих языка любви — попробуйте заботиться о каждом из них.";
+  } else {
+    tieNote.style.display = "none";
+  }
+
+  // бары (emphasis: лидер — акцент, остальные — нейтральный серый)
+  const barsEl = document.getElementById("bars");
+  barsEl.innerHTML = "";
+  order.forEach((k, i) => {
+    const L = LANGS[k];
+    const row = document.createElement("div");
+    row.className = "row" + (k === top ? " win" : "");
+    row.innerHTML =
+      '<div class="name">' + L.name + (k === top ? " · ведущий" : "") + "</div>" +
+      '<div class="val"><strong>' + scores[k] + "</strong> из " + L.max + "</div>" +
+      '<div class="bar-track"><div class="bar-fill" data-w="' + (scores[k] / L.max * 100) + '"></div></div>';
+    barsEl.appendChild(row);
+  });
+
+  // интерпретация лидера
+  const interpMain = document.getElementById("interp-main");
+  interpMain.innerHTML = "<h3>💛 Что это означает</h3>" + LANGS[top].interp.map(p => "<p>" + p + "</p>").join("");
+
+  // остальные языки
+  const othersEl = document.getElementById("interp-others");
+  othersEl.innerHTML = "";
+  order.slice(1).forEach(k => {
+    const block = document.createElement("div");
+    block.className = "other-block";
+    block.innerHTML = "<h4>" + LANGS[k].name + "</h4>" + LANGS[k].interp.map(p => "<p>" + p + "</p>").join("");
+    othersEl.appendChild(block);
+  });
+
+  show("results");
+  // анимация заполнения баров после появления экрана
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll(".bar-fill").forEach(b => { b.style.width = b.dataset.w + "%"; });
+  }));
+}
+
+/* ---------- кнопки ---------- */
+
+document.getElementById("btn-start").addEventListener("click", () => {
+  answers = []; idx = 0;
+  renderQuestion();
+  show("quiz");
+});
+document.getElementById("btn-again").addEventListener("click", () => {
+  answers = []; idx = 0;
+  renderQuestion();
+  show("quiz");
+});
+</script>
+</body>
+</html>
